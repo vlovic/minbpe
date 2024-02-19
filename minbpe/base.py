@@ -5,10 +5,12 @@ It would be possible to be a lot more strict about the interface and
 e.g. isolating all regex/pattern parts to the RegexTokenizer, but
 some concessions are made for simplicity.
 """
+
 import unicodedata
 
 # -----------------------------------------------------------------------------
 # a few helper functions useful for both BasicTokenizer and RegexTokenizer
+
 
 def get_stats(ids):
     """
@@ -16,7 +18,7 @@ def get_stats(ids):
     Example: [1, 2, 3, 1, 2] -> {(1, 2): 2, (2, 3): 1, (3, 1): 1}
     """
     counts = {}
-    for pair in zip(ids, ids[1:]): # iterate consecutive elements
+    for pair in zip(ids, ids[1:]):  # iterate consecutive elements
         counts[pair] = counts.get(pair, 0) + 1
     return counts
 
@@ -31,13 +33,14 @@ def merge(ids, pair, idx):
     i = 0
     while i < len(ids):
         # if not at the very last position AND the pair matches, replace it
-        if ids[i] == pair[0] and i < len(ids) - 1 and ids[i+1] == pair[1]:
+        if i < len(ids) - 1 and (ids[i], ids[i + 1]) == pair:
             newids.append(idx)
             i += 2
         else:
             newids.append(ids[i])
             i += 1
     return newids
+
 
 # first two helper functions...
 def replace_control_characters(s: str) -> str:
@@ -48,27 +51,30 @@ def replace_control_characters(s: str) -> str:
     chars = []
     for ch in s:
         if unicodedata.category(ch)[0] != "C":
-            chars.append(ch) # this character is ok
+            chars.append(ch)  # this character is ok
         else:
-            chars.append(f"\\u{ord(ch):04x}") # escape
+            chars.append(f"\\u{ord(ch):04x}")  # escape
     return "".join(chars)
+
 
 def render_token(t: bytes) -> str:
     # pretty print a token, escaping control characters
-    s = t.decode('utf-8', errors='replace')
+    s = t.decode("utf-8", errors="replace")
     s = replace_control_characters(s)
     return s
 
+
 # -----------------------------------------------------------------------------
 # the base Tokenizer class
+
 
 class Tokenizer:
     """Base class for Tokenizers"""
 
     def __init__(self):
         # default: vocab size of 256 (all bytes), no merges, no patterns
-        self.merges = {} # (int, int) -> int
-        self.vocab = self._build_vocab() # int -> bytes
+        self.merges = {}  # (int, int) -> int
+        self.vocab = self._build_vocab()  # int -> bytes
         self.pattern = ""
 
     def train(self, text, vocab_size, verbose=False):
@@ -99,7 +105,7 @@ class Tokenizer:
         """
         # write the model: to be used in load() later
         model_file = file_prefix + ".model"
-        with open(model_file, 'w') as f:
+        with open(model_file, "w") as f:
             # write the version, pattern and merges, that's all that's needed
             f.write(f"minbpe v1\n")
             f.write(f"{self.pattern}\n")
@@ -134,7 +140,7 @@ class Tokenizer:
         # read the model file
         merges = {}
         idx = 256
-        with open(model_file, 'r') as f:
+        with open(model_file, "r") as f:
             # read the version
             version = f.readline().strip()
             assert version == "minbpe v1"
